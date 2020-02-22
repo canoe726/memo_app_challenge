@@ -1,0 +1,32 @@
+<resources>
+    <string name="launch_app_name">메모장</string>
+    <string name="app_name">메모장</string>
+    <string name="drawer_open">drawer_open</string>
+    <string name="drawer_close">drawer_close</string>
+    <string name="button_imageEnlarge">이미지 크게 보기</string>
+    <string name="button_imageDelete">이미지 삭제 하기</string>
+    <string name="editText_memoTitle">메모 제목을 작성하세요</string>
+    <string name="editText_memoContent">메모 내용을 작성하세요</string>
+    <string name="textView_memoImageInput">이미지 추가하기</string>
+    <string name="textView_addImageUrl">이미지 URL 추가</string>
+    <string name="textView_addImageUrlHint">URL을 입력하세요</string>
+    <string name="button_addImageUrl">이미지 추가하기</string>
+    <string name="button_back">뒤로가기</string>
+    <string name="button_getGalleryImage">갤러리에서 이미지 추가</string>
+    <string name="button_getCameraImage">카메라로 이미지 추가</string>
+    <string name="button_getUrlImage">URL로 사진 추가</string>
+    <string name="item_memoAdd">메모 추가</string>
+    <string name="item_memoDelete">메모 삭제</string>
+    <string name="imageView_nonImageDesc">이미지가 없습니다</string>
+    <string name="string_showImage">이미지 보기</string>
+    <string name="textView_saveOrNot">작성중인 메모를 저장하시겠습니까?</string>
+    <string name="button_save">저장</string>
+    <string name="button_cancel">취소</string>
+    <string name="button_delete">삭제</string>
+    <string name="button_selectAll">전체 선택</string>
+    <string name="button_add">추가</string>
+    <string name="textView_invalidUrl">유효하지 않은 URL 입니다.</string>
+
+    <string name="permission_1">[설정] > [권한] 에서 권한을 허용할 수 있습니다.</string>
+    <string name="permission_2">사진 및 파일을 저장하기 위하여 접근 권한이 필요합니다.</string>
+</resources>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/main_selectAll"
+        android:title="@string/button_selectAll"
+        app:showAsAction="ifRoom"
+        />
+
+    <item
+        android:id="@+id/main_deleteMemo"
+        android:title="@string/button_delete"
+        app:showAsAction="ifRoom"
+        />
+
+    <item
+        android:id="@+id/main_cancel"
+        android:title="@string/button_cancel"
+        app:showAsAction="ifRoom"
+        />
+</menu>
