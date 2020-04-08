@@ -16,7 +16,6 @@ import java.net.URL;
 // 이미지 로딩 시 Picasso 라이브러리 사용 [출처 : https://github.com/square/picasso]
 
 public class ImagePreview extends AppCompatActivity {
-
     private androidx.appcompat.widget.Toolbar toolbar;
     private Handler handler = new Handler();
     private ImageView preview_ImageView;
@@ -32,7 +31,7 @@ public class ImagePreview extends AppCompatActivity {
         intent = getIntent();
         String image_path = intent.getExtras().getString("IMAGE_ITEM_PATH");
 
-        if( image_path.contains("https://") ) {
+        if(image_path.contains("https://")) {
             Thread thread = new Thread(new ImageLoadThread(image_path));
             thread.start();
         } else {
@@ -44,18 +43,16 @@ public class ImagePreview extends AppCompatActivity {
     private void initLayout() {
         toolbar = (androidx.appcompat.widget.Toolbar) findViewById(R.id.main_toolbar);
         setSupportActionBar(toolbar);
-        // 툴바 설정
-        getSupportActionBar().setTitle(R.string.string_showImage);
+        getSupportActionBar().setTitle(R.string.string_showImage);                  // 툴바 설정
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         preview_ImageView = (ImageView) findViewById(R.id.preview_ImageView);
     }
 
-    // 툴바의 뒤로가기 버튼을 눌렀을 때 동작
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(MenuItem item) {                   // 툴바의 뒤로가기 버튼을 눌렀을 때 동작
         switch (item.getItemId()){
-            case android.R.id.home:{ //toolbar의 back키 눌렀을 때 동작
+            case android.R.id.home: {                                       // toolbar의 back키 눌렀을 때 동작
                 finish();
                 return true;
             }
@@ -65,7 +62,7 @@ public class ImagePreview extends AppCompatActivity {
 
     public class ImageLoadThread implements Runnable {
         private String item;
-        public ImageLoadThread(String item) {
+        private ImageLoadThread(String item) {
             this.item = item;
         }
 
@@ -76,7 +73,7 @@ public class ImagePreview extends AppCompatActivity {
                 InputStream is = url.openStream();
                 handler.post(new Runnable() {
                     @Override
-                    public void run() {  // 화면에 그려줄 작업
+                    public void run() {                                             // 화면에 그려줄 작업
                         Picasso.get().load(item).into(preview_ImageView);
                     }
                 });

@@ -3,7 +3,11 @@ package com.example.memoapplication;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.GestureDetector;
@@ -35,21 +39,22 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class MainActivity extends AppCompatActivity {
+    public static int databaseMemoId;
+    public static SQLiteDatabase sqLiteDatabase;
 
-    public static ArrayList<MemoInfoData> originalMemoInfoData = new ArrayList<MemoInfoData>();
-    public static ArrayList<MemoInfoData> globalMemoInfoData = new ArrayList<MemoInfoData>();
-    public static MemoListArrayAdapter memoListArrayAdapter;
-
+    private MemoListArrayAdapter memoListArrayAdapter;
+    private ArrayList<MemoInfoData> memoInfoData = new ArrayList<MemoInfoData>();
+    private SharedPreferences sharedPreferences;
     private androidx.appcompat.widget.Toolbar toolbar;
     private RecyclerView memo_recyclerView;
     private FloatingActionButton floatingActionButton;
     private Intent intent;
     private Bundle bundle;
 
-    // 권한 리스트 (저장소, 카메라)
-    String[] permission_list = {
+    String[] permission_list = {        // 권한 리스트 (저장소, 카메라)
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.CAMERA,
@@ -58,35 +63,35 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        // 앱 강제 종료시 핸들링을 위한 서비스 시작
-        startService(new Intent(this, TaskService.class));
-        // 파일 읽고 쓰기 및 카메라 권한 체크
-        checkPermission();
-        initLayout();
-        // 로컬에서 메모 파일 불러와 전역 변수에 저장
-        getMemoData();
-        globalMemoInfoData.addAll(originalMemoInfoData);
 
-        memoListArrayAdapter = new MemoListArrayAdapter(this, globalMemoInfoData);
+        sharedPreferences = getSharedPreferences("memoId", MODE_PRIVATE);      // 메모 id 값 생성
+        databaseMemoId = sharedPreferences.getInt("ID", 0);             // ID 라는 key 에 저장된 값이 있으면 반환, 그렇지 않으면 0 반환
+
+        sqLiteDatabase = init_database();       // 데이터 베이스가 없으면 생성
+        init_table();                           // 데이터 베이스 테이블 정의
+
+        setContentView(R.layout.activity_main);
+        checkPermission();                      // 파일 읽고 쓰기 및 카메라 권한 체크
+        initLayout();
+
+        memoListArrayAdapter = new MemoListArrayAdapter(this, memoInfoData);
         memoListArrayAdapter.setDeleteMode(false);
         memo_recyclerView.setAdapter(memoListArrayAdapter);
-
         memo_recyclerView.addOnItemTouchListener(new RecyclerTouchListener(getApplicationContext(), memo_recyclerView, new ClickListener() {
             @Override
             public void onClick(View view, int position) {
                 if( !memoListArrayAdapter.getDeleteMode() ) {
                     intent = new Intent(MainActivity.this, ShowMemoItem.class);
                     bundle = new Bundle();
-                    bundle.putSerializable("memo_item", globalMemoInfoData.get(position));
+                    bundle.putSerializable("memo_item", memoInfoData.get(position));
                     intent.putExtras(bundle);
                     intent.putExtra("ITEM_INDEX", position);
                     startActivity(intent);
-                } else { // 삭제 모드 일때
-                    if( globalMemoInfoData.get(position).getChecked() == true ) {
-                        globalMemoInfoData.get(position).setChecked(false);
+                } else {                                                    // 삭제 모드 일때
+                    if( memoInfoData.get(position).getChecked() == 1 ) {
+                        memoInfoData.get(position).setChecked(0);
                     } else {
-                        globalMemoInfoData.get(position).setChecked(true);
+                        memoInfoData.get(position).setChecked(1);
                     }
                     memoListArrayAdapter.notifyDataSetChanged();
                 }
@@ -105,6 +110,92 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        load_memoInfo();                        // 데이터 베이스 테이블 값 쿼리로 불러오기
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        sharedPreferences = getSharedPreferences("memoId", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt("ID", databaseMemoId);
+        editor.commit();
+    }
+
+    private SQLiteDatabase init_database() {
+        SQLiteDatabase database = null;
+        File file = new File(getFilesDir(), "memoInfo.db");
+        System.out.println("PATH : " + file.toString());
+
+        try {
+            database = SQLiteDatabase.openOrCreateDatabase(file, null);
+        } catch (SQLiteException e) {
+            e.printStackTrace();
+        }
+
+        if( database == null ) {
+            System.out.println("DB creation failed. " + file.getAbsolutePath());
+        }
+
+        return database;
+    }
+
+    private void init_table() {
+        if( sqLiteDatabase != null ) {
+            String sqlCreateQuery = "CREATE TABLE IF NOT EXISTS MEMO_INFO (" +
+                    "ID "          + "INT PRIMARY KEY, " +
+                    "THUMBNAIL "   + "VARCHAR, " +
+                    "IMAGES "      + "TEXT, " +
+                    "TITLE "       + "VARCHAR NOT NULL, " +
+                    "CONTENT "     + "TEXT, " +
+                    "DATE "        + "VARCHAR, " +
+                    "CHECKED "     + "INTEGER" + ")";
+            System.out.println(sqlCreateQuery);
+            sqLiteDatabase.execSQL(sqlCreateQuery);
+        }
+    }
+
+    private void load_memoInfo() {
+        if( sqLiteDatabase != null ) {
+            memoInfoData.clear();
+
+            String sqlQuery = "SELECT * FROM MEMO_INFO";
+            Cursor cursor = null;
+            cursor = sqLiteDatabase.rawQuery(sqlQuery, null);       // 쿼리 실행
+
+            if( cursor.moveToLast() ) {                                         // 레코드가 존재하면 실행
+                while(!cursor.isBeforeFirst()) {
+                    int id = cursor.getInt(0);
+                    String thumbnail = cursor.getString(1);
+
+                    String temp_images = cursor.getString(2);
+                    temp_images = temp_images.replace("[", "");
+                    temp_images = temp_images.replace("]", "");
+                    temp_images = temp_images.replace(" ", "");
+                    ArrayList<String> images = new ArrayList<String>(Arrays.asList(temp_images.split(",")));
+
+                    String title = cursor.getString(3);
+                    String content = cursor.getString(4);
+                    String date = cursor.getString(5);
+                    Integer checked = cursor.getInt(6);
+
+                    MemoInfoData data = new MemoInfoData(id, thumbnail, images, title, content, date, checked);
+                    memoInfoData.add(data);
+
+                    cursor.moveToPrevious();
+                }
+                cursor.close();
+            }
+            Collections.sort(memoInfoData);
+            memoListArrayAdapter.notifyDataSetChanged();
+        }
+    }
+
     private void initLayout() {
         toolbar = (androidx.appcompat.widget.Toolbar) findViewById(R.id.main_toolbar);
         setSupportActionBar(toolbar);
@@ -115,91 +206,13 @@ public class MainActivity extends AppCompatActivity {
         memo_recyclerView.setLayoutManager(layoutManager);
 
         floatingActionButton = (FloatingActionButton) findViewById(R.id.main_floatingButton);
-
-        globalMemoInfoData.clear();
-        originalMemoInfoData.clear();
     }
 
-    private void getMemoData() {
-        try {
-            FileOutputStream fos = null;
-            File file = getApplicationContext().getFileStreamPath("memo_info.json");
-            // 파일이 없으면 빈 파일 생성
-            if(file == null || !file.exists()) {
-                String inputData = "";
-                fos = openFileOutput("memo_info.json", Context.MODE_PRIVATE);
-                fos.write(inputData.getBytes());
-                fos.close();
-            }
-            // 파일이 있으면 내용 불러오기
-            else {
-                String buffer = "";
-                String data = null;
-                FileInputStream fis = null;
-                try {
-                    fis = openFileInput("memo_info.json");
-                    BufferedReader iReader = new BufferedReader(new InputStreamReader((fis)));
-
-                    data = iReader.readLine();
-                    while(data != null)
-                    {
-                        buffer += data;
-                        data = iReader.readLine();
-                    }
-                    iReader.close();
-
-                    try {
-                        JSONArray array;
-                        if( buffer == "" ) {
-                            array = new JSONArray();
-                        } else {
-                            array = new JSONArray(buffer);
-                        }
-                        for(int i=0; i < array.length(); i++) {
-                            JSONObject object = array.getJSONObject(i);
-
-                            String thumbnail = object.getString("thumbnail");
-                            ArrayList<String> images = null;
-                            if(!thumbnail.equals("")) {
-                                thumbnail = object.getString("thumbnail");
-
-                                // String to ArrayList<String>
-                                String image = object.getString("images");
-                                image = image.replace("[","");
-                                image = image.replace("]","");
-                                image = image.replace(" ","");
-                                images = new ArrayList<>(Arrays.asList(image.split(",")));
-                            }
-                            String title = object.getString("title");
-                            String content = object.getString("content");
-                            String date = object.getString("date");
-
-                            MemoInfoData memoInfoData = new MemoInfoData(thumbnail, images, title, content, date, false);
-                            originalMemoInfoData.add(memoInfoData);
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    // 메모 추가, 삭제 버튼 툴바에 추가
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(Menu menu) {          // 메모 추가, 삭제 버튼 툴바에 추가
         MenuInflater menuInflater = getMenuInflater();
 
-        // appbar 메뉴 재설정
-        if(memoListArrayAdapter.getDeleteMode() == true ) {
+        if(memoListArrayAdapter.getDeleteMode()) {           // appbar 메뉴 재설정
             menuInflater.inflate(R.menu.main_toolbar_delete_button, menu);
         } else {
             menuInflater.inflate(R.menu.main_toolbar_button, menu);
@@ -208,62 +221,55 @@ public class MainActivity extends AppCompatActivity {
         return super.onCreateOptionsMenu(menu);
     }
 
-    // toolbar 아이템 동작
     @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {      // toolbar 아이템 동작
         switch(item.getItemId()) {
-            // 일반 모드, 툴바의 메모 추가 버튼 눌렀을 때 동작
-            case R.id.main_addMemo: {
+            case R.id.main_addMemo: {                  // 일반 모드, 툴바의 메모 추가 버튼 눌렀을 때 동작
                 Toast.makeText(MainActivity.this, "메모 추가 화면으로 이동합니다.", Toast.LENGTH_SHORT).show();
                 intent = new Intent(MainActivity.this, AddMemoActivity.class);
                 startActivity(intent);
                 return true;
             }
-            // 일반 모드, 툴바의 메모 삭제 버튼 눌렀을 때 동작
-            case R.id.main_deleteMode: {
-                // 삭제할 메모가 없을 때
-                if( globalMemoInfoData.size() == 0 ) {
+            case R.id.main_deleteMode: {                // 일반 모드, 툴바의 메모 삭제 버튼 눌렀을 때 동작
+                if( memoInfoData.size() == 0 ) {        // 삭제할 메모가 없을 때
                     Toast.makeText(MainActivity.this, "삭제할 메모가 없습니다.", Toast.LENGTH_SHORT).show();
                 } else {
                     memoListArrayAdapter.setDeleteMode(true);
-                    // appbar 메뉴 변경 위한 onCreateOptionsMenu 호출
-                    invalidateOptionsMenu();
+                    invalidateOptionsMenu();             // appbar 메뉴 변경 위한 onCreateOptionsMenu 호출
                     memo_recyclerView.setAdapter(memoListArrayAdapter);
                 }
                 return true;
             }
-            // 삭제 모드, 툴바의 메모 전체 선택 버튼 눌렀을 때 동작
-            case R.id.main_selectAll: {
-                // 전체 선택
-                for(int i=0; i<globalMemoInfoData.size(); i++) {
-                    globalMemoInfoData.get(i).setChecked(true);
+            case R.id.main_selectAll: {                           // 삭제 모드, 툴바의 메모 전체 선택 버튼 눌렀을 때 동작
+                for(int i=0; i<memoInfoData.size(); i++) {        // 전체 선택, 보이는 화면의 목록 제거
+                    memoInfoData.get(i).setChecked(1);
                 }
                 memoListArrayAdapter.notifyDataSetChanged();
                 return true;
             }
-            // 삭제 모드, 툴바의 메모 삭제 버튼 눌렀을 때 동작
-            case R.id.main_deleteMemo: {
-                // 선택된 항목 삭제
-                for(int i=0; i<globalMemoInfoData.size(); i++) {
-                    if( globalMemoInfoData.get(i).getChecked() == true ) {
-                        globalMemoInfoData.remove(i);
+            case R.id.main_deleteMemo: {                               // 삭제 모드, 툴바의 메모 삭제 버튼 눌렀을 때 동작
+                for(int i=0; i<memoInfoData.size(); i++) {
+                    if( memoInfoData.get(i).getChecked() == 1 ) {      // 선택된 항목 삭제
+                        int delete_id = memoInfoData.get(i).getId();
+                        String sqlQuery = "DELETE FROM MEMO_INFO WHERE ID = " + "'" +  delete_id + "'";
+                        System.out.println(sqlQuery);
+                        sqLiteDatabase.execSQL(sqlQuery);              // 데이터 베이스에서 선택한 메모 정보 삭제
+
+                        memoInfoData.remove(i);
                         i--;
                     }
                 }
                 memoListArrayAdapter.notifyDataSetChanged();
-
                 memoListArrayAdapter.setDeleteMode(false);
-                // appbar 메뉴 변경 위한 onCreateOptionsMenu 호출
-                invalidateOptionsMenu();
+
+                invalidateOptionsMenu();        // appbar 메뉴 변경 위한 onCreateOptionsMenu 호출
                 memo_recyclerView.setAdapter(memoListArrayAdapter);
                 Toast.makeText(MainActivity.this, "선택한 메모를 삭제하였습니다.", Toast.LENGTH_SHORT).show();
                 return true;
             }
-            // 삭제 모드, 툴바의 메모 취소 버튼 눌렀을 때 동작 => 일반 모드로 변경
-            case R.id.main_cancel: {
+            case R.id.main_cancel: {            // 삭제 모드, 툴바의 메모 취소 버튼 눌렀을 때 동작 => 일반 모드로 변경
                 memoListArrayAdapter.setDeleteMode(false);
-                // appbar 메뉴 변경 위한 onCreateOptionsMenu 호출
-                invalidateOptionsMenu();
+                invalidateOptionsMenu();         // appbar 메뉴 변경 위한 onCreateOptionsMenu 호출
                 memo_recyclerView.setAdapter(memoListArrayAdapter);
                 return true;
             }
@@ -271,35 +277,29 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // 권한 허용 체크
-    public void checkPermission() {
-        //현재 안드로이드 버전이 6.0미만이면 메서드를 종료한다.
-        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+    public void checkPermission() {                               // 권한 허용 체크
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {       // 현재 안드로이드 버전이 6.0미만이면 메서드를 종료한다.
             return;
+        }
 
         for(String permission : permission_list) {
-            //권한 허용 여부를 확인한다.
-            int chk = checkCallingOrSelfPermission(permission);
-            if(chk == PackageManager.PERMISSION_DENIED) {
-                //권한 허용을여부를 확인하는 창을 띄운다
+            int chk = checkCallingOrSelfPermission(permission);      // 권한 허용 여부를 확인한다.
+            if(chk == PackageManager.PERMISSION_DENIED) {            // 권한 허용을여부를 확인하는 창을 띄운다
                 ActivityCompat.requestPermissions(this, permission_list,0);
             }
         }
     }
 
-    // 모든 권한 허용을 하지 않으면 앱 종료
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {        // 모든 권한 허용을 하지 않으면 앱 종료
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if(requestCode==0)
         {
             for(int i=0; i<grantResults.length; i++)
             {
-                // 모든 권한이 허용 되었다면
-                if(grantResults[i]==PackageManager.PERMISSION_GRANTED){
+                if(grantResults[i]==PackageManager.PERMISSION_GRANTED){         // 모든 권한이 허용 되었다면
                     System.out.println("All Permission is accepted");
-                }
-                else {
+                } else {
                     Toast.makeText(getApplicationContext(),"권한 설정을 해주세요",Toast.LENGTH_LONG).show();
                     finish();
                 }
@@ -312,13 +312,11 @@ public class MainActivity extends AppCompatActivity {
         void onLongClick(View view, int position);
     }
 
-    // RecyclerView item 클릭시 반응
-    public static class RecyclerTouchListener implements RecyclerView.OnItemTouchListener {
-
+    public static class RecyclerTouchListener implements RecyclerView.OnItemTouchListener {     // RecyclerView item 클릭시 반응
         private GestureDetector gestureDetector;
         private MainActivity.ClickListener clickListener;
 
-        public RecyclerTouchListener(Context context, final RecyclerView recyclerView, final MainActivity.ClickListener clickListener) {
+        private RecyclerTouchListener(Context context, final RecyclerView recyclerView, final MainActivity.ClickListener clickListener) {
             this.clickListener = clickListener;
             gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
                 @Override
@@ -349,72 +347,17 @@ public class MainActivity extends AppCompatActivity {
         public void onTouchEvent(RecyclerView rv, MotionEvent e) {}
 
         @Override
-        public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {
-        }
+        public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {}
     }
 
-    // 뒤로가기 버튼
     @Override
-    public void onBackPressed() {
+    public void onBackPressed() {                         // 뒤로가기 버튼
         super.onBackPressed();
 
-        // 삭제 모드이면 일반모드로 변경
-        if( memoListArrayAdapter.getDeleteMode() == true ) {
+        if(memoListArrayAdapter.getDeleteMode()) {        // 삭제 모드이면 일반모드로 변경
             memoListArrayAdapter.setDeleteMode(false);
             invalidateOptionsMenu();
             memo_recyclerView.setAdapter(memoListArrayAdapter);
-        }
-    }
-
-    // 메모 내용 저장
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
-        try {
-            String inputData = "";
-
-            boolean same = true;
-            if( globalMemoInfoData.size() != originalMemoInfoData.size() ) {
-                same = false;
-            } else {
-                for(int i=0; i<globalMemoInfoData.size(); i++) {
-                    if(     (globalMemoInfoData.get(i).getThumbnail() != originalMemoInfoData.get(i).getThumbnail()) ||
-                            (globalMemoInfoData.get(i).getTitle() != originalMemoInfoData.get(i).getTitle()) ||
-                            (globalMemoInfoData.get(i).getContent() != originalMemoInfoData.get(i).getContent()) ) {
-                        same = false;
-                        break;
-                    }
-                }
-            }
-
-            if( !same ) {
-                FileOutputStream fos = openFileOutput("memo_info.json", Context.MODE_PRIVATE);
-
-                JSONArray jsonArray = new JSONArray();
-
-                for (int i = 0; i < globalMemoInfoData.size(); i++) {
-                    MemoInfoData memoInfoData = globalMemoInfoData.get(i);
-
-                    JSONObject jsonObject = new JSONObject();
-                    jsonObject.put("thumbnail", memoInfoData.getThumbnail());
-                    jsonObject.put("images", memoInfoData.getImages());
-                    jsonObject.put("title", memoInfoData.getTitle());
-                    jsonObject.put("content", memoInfoData.getContent());
-                    jsonObject.put("date", memoInfoData.getDate());
-
-                    jsonArray.put(jsonObject);
-                }
-                inputData = jsonArray.toString();
-                fos.write(inputData.getBytes());
-                fos.close();
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
-            e.printStackTrace();
         }
     }
 }

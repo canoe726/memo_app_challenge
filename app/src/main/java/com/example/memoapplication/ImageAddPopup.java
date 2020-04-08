@@ -20,15 +20,14 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class ImageAddPopup extends Activity {
+    static final int GET_GALLERY_IMAGE = 1;
+    static final int REQUEST_TAKE_PHOTO = 2;
+    static final int GET_IMAGE_URL = 3;
 
     private Button popup_getImageFromGallery;
     private Button popup_getImageFromCamera;
     private Button popup_getImageFromURL;
     private Uri cameraImageUri;
-
-    static final int GET_GALLERY_IMAGE = 1;
-    static final int REQUEST_TAKE_PHOTO = 2;
-    static final int GET_IMAGE_URL = 3;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,8 +39,7 @@ public class ImageAddPopup extends Activity {
         popup_getImageFromGallery.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 갤러리로 넘어가기
-                Intent intent = new Intent(Intent.ACTION_PICK);
+                Intent intent = new Intent(Intent.ACTION_PICK);         // 갤러리로 넘어가기
                 intent.setData(MediaStore.Images.Media.INTERNAL_CONTENT_URI);
                 startActivityForResult(intent, GET_GALLERY_IMAGE);
             }
@@ -71,16 +69,14 @@ public class ImageAddPopup extends Activity {
 
     private File getLocalImagePath(Intent data) {
         File imageFile = null;
-        // 로컬 이미지 경로 얻기
-        Uri selectedImageUri = data.getData();
+        Uri selectedImageUri = data.getData();                              // 로컬 이미지 경로 얻기
 
         Cursor cursor = null;
         try {
-            // Uri 스키마를 content:/// 에서 file:/// 로  변경한다.
-            String[] proj = { MediaStore.Images.Media.DATA };
+            String[] project = { MediaStore.Images.Media.DATA };               // Uri 스키마를 content:/// 에서 file:/// 로  변경한다.
 
             assert selectedImageUri != null;
-            cursor = getContentResolver().query(selectedImageUri, proj, null, null, null);
+            cursor = getContentResolver().query(selectedImageUri, project, null, null, null);
 
             assert cursor != null;
             int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
@@ -88,6 +84,7 @@ public class ImageAddPopup extends Activity {
             cursor.moveToFirst();
 
             imageFile = new File(cursor.getString(column_index));
+
         } finally {
             if (cursor != null) {
                 cursor.close();
@@ -101,8 +98,7 @@ public class ImageAddPopup extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         if (requestCode == GET_GALLERY_IMAGE && resultCode == RESULT_OK) {
-            // 메모 추가 화면으로 값을 넘기면서 이동
-            Intent intent = new Intent(ImageAddPopup.this, AddMemoActivity.class);
+            Intent intent = new Intent(ImageAddPopup.this, AddMemoActivity.class);              // 메모 추가 화면으로 값을 넘기면서 이동
             String path = getLocalImagePath(data).getAbsolutePath();
             intent.putExtra("IMAGE_PATH", path);
             setResult(RESULT_OK, intent);
@@ -112,11 +108,10 @@ public class ImageAddPopup extends Activity {
             Uri selectedImageUri = cameraImageUri;
             Cursor cursor = null;
             try {
-                // Uri 스키마를 content:/// 에서 file:/// 로  변경한다.
-                String[] proj = { MediaStore.Images.Media.DATA };
+                String[] project = { MediaStore.Images.Media.DATA };               // Uri 스키마를 content:/// 에서 file:/// 로  변경한다.
 
                 assert selectedImageUri != null;
-                cursor = getContentResolver().query(selectedImageUri, proj, null, null, null);
+                cursor = getContentResolver().query(selectedImageUri, project, null, null, null);
 
                 assert cursor != null;
                 int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
@@ -124,21 +119,23 @@ public class ImageAddPopup extends Activity {
                 cursor.moveToFirst();
 
                 imageFile = new File(cursor.getString(column_index));
+
             } finally {
                 if (cursor != null) {
                     cursor.close();
                 }
             }
-            // 메모 추가 화면으로 값을 넘기면서 이동
-            Intent intent = new Intent(ImageAddPopup.this, AddMemoActivity.class);
+
+            Intent intent = new Intent(ImageAddPopup.this, AddMemoActivity.class);              // 메모 추가 화면으로 값을 넘기면서 이동
             String path = imageFile.getAbsolutePath();
             intent.putExtra("IMAGE_PATH", path);
             setResult(RESULT_OK, intent);
             finish();
+
         } else if (requestCode == GET_IMAGE_URL && resultCode == RESULT_OK) {
             String path = data.getExtras().getString("IMAGE_PATH");
-            // 메모 추가 화면으로 값을 넘기면서 이동
-            Intent intent = new Intent(ImageAddPopup.this, AddMemoActivity.class);
+
+            Intent intent = new Intent(ImageAddPopup.this, AddMemoActivity.class);              // 메모 추가 화면으로 값을 넘기면서 이동
             intent.putExtra("IMAGE_PATH", path);
             setResult(RESULT_OK, intent);
             finish();
@@ -146,25 +143,21 @@ public class ImageAddPopup extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    // 카메라에서 이미지 가져오기
-    private void getImageFromCamera() {
+    private void getImageFromCamera() {                                             // 카메라에서 이미지 가져오기
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        // Ensure that there's a camera activity to handle the intent
-        if (intent.resolveActivity(getPackageManager()) != null) {
-            // Create the File where the photo should go
-            File photoFile = null;
+
+        if (intent.resolveActivity(getPackageManager()) != null) {                  // Ensure that there's a camera activity to handle the intent
+            File photoFile = null;                                                  // Create the File where the photo should go
             try {
                 photoFile = createImageFile();
             } catch (IOException e) {
-                // Error occurred while creating the File
-                Toast.makeText(this, "다시 시도해주세요.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "다시 시도해주세요.", Toast.LENGTH_SHORT).show();          // Error occurred while creating the File
                 finish();
                 e.printStackTrace();
             }
-            // Continue only if the File was successfully created
-            if (photoFile != null) {
-                // 고화질 이미지 전송
-                ContentValues values = new ContentValues();
+
+            if (photoFile != null) {                                            // Continue only if the File was successfully created
+                ContentValues values = new ContentValues();                     // 고화질 이미지 전송
                 values.put(MediaStore.Images.Media.TITLE, "New Picture");
                 values.put(MediaStore.Images.Media.DESCRIPTION, "From your Camera");
 
@@ -176,8 +169,7 @@ public class ImageAddPopup extends Activity {
     }
 
     private File createImageFile() throws IOException {
-        // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());                  // Create an image file name
         String imageFileName = "MEMO_" + timeStamp + "_";
 
         File storageDir = new File(Environment.getExternalStorageDirectory() + "/memo/");

@@ -12,7 +12,6 @@ import android.widget.TextView;
 import java.net.URL;
 
 public class InputImageUrlPopup extends Activity {
-
     private Handler handler = new Handler();
     private EditText popup_getImageFromURL;
     private Button popup_sendButton;
@@ -40,7 +39,7 @@ public class InputImageUrlPopup extends Activity {
                             final URL url = new URL(url_path);
                             handler.post(new Runnable() {
                                 @Override
-                                public void run() {  // 화면에 그려줄 작업
+                                public void run() {                                         // 화면에 그려줄 작업
                                     Intent intent = new Intent(InputImageUrlPopup.this, ImageAddPopup.class);
                                     intent.putExtra("IMAGE_PATH", url_path);
                                     setResult(RESULT_OK, intent);
@@ -48,18 +47,16 @@ public class InputImageUrlPopup extends Activity {
                                 }
                             });
                         } catch(Exception e){
-                            // 잘못된 URL 입력
-                            url_result = false;
+                            url_result = false;                                         // 잘못된 URL 입력
                             System.out.println(e);
                         }
                     }
                 });
-
                 thread.start();
 
                 try {
                     thread.join();
-                    if(url_result == true ) {
+                    if(url_result) {
                         popup_invalidUrl.setVisibility(View.GONE);
                     } else {
                         popup_invalidUrl.setVisibility(View.VISIBLE);
@@ -77,8 +74,6 @@ public class InputImageUrlPopup extends Activity {
             }
         });
     }
-
-
 
     private void initLayout() {
         popup_getImageFromURL = (EditText) findViewById(R.id.popup_getImageFromURL);

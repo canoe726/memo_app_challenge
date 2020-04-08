@@ -1,20 +1,20 @@
 package com.example.memoapplication;
 
-import android.app.Application;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 
-public class MemoInfoData extends Application implements Serializable {
+public class MemoInfoData implements Serializable, Comparable<MemoInfoData> {
 
+    private int id;
     private String thumbnail;
     private ArrayList<String> images;
     private String title;
     private String content;
     private String date;
-    private Boolean checked;
+    private Integer checked;
 
-    MemoInfoData(String thumbnail, ArrayList<String> images, String title, String content, String date, Boolean checked) {
+    MemoInfoData(int id, String thumbnail, ArrayList<String> images, String title, String content, String date, Integer checked) {
+        this.id = id;
         this.thumbnail = thumbnail;
         this.images = images;
         this.title = title;
@@ -23,7 +23,16 @@ public class MemoInfoData extends Application implements Serializable {
         this.checked = checked;
     }
 
+    @Override
+    public int compareTo(MemoInfoData data) {
+        return data.date.compareTo(this.date);          // 최신 순으로 메모 정렬
+    }
+
     // setter
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public void setThumbnail(String thumbnail) {
         this.thumbnail = thumbnail;
     }
@@ -44,11 +53,15 @@ public class MemoInfoData extends Application implements Serializable {
         this.date = date;
     }
 
-    public void setChecked(Boolean checked) {
+    public void setChecked(Integer checked) {
         this.checked = checked;
     }
 
     // getter
+    public int getId() {
+        return id;
+    }
+
     public String getThumbnail() {
         return thumbnail;
     }
@@ -69,7 +82,7 @@ public class MemoInfoData extends Application implements Serializable {
         return date;
     }
 
-    public Boolean getChecked() {
+    public Integer getChecked() {
         return checked;
     }
 }

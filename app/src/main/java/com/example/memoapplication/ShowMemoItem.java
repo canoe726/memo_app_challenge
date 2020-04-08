@@ -27,11 +27,9 @@ import java.util.ArrayList;
 import java.util.Date;
 
 import static com.example.memoapplication.AddMemoActivity.POPUP_RES;
-import static com.example.memoapplication.MainActivity.globalMemoInfoData;
-import static com.example.memoapplication.MainActivity.memoListArrayAdapter;
+import static com.example.memoapplication.MainActivity.sqLiteDatabase;
 
 public class ShowMemoItem extends AppCompatActivity {
-
     private androidx.appcompat.widget.Toolbar toolbar;
     private TextView show_title;
     private TextView show_content;
@@ -46,8 +44,8 @@ public class ShowMemoItem extends AppCompatActivity {
     private LinearLayout show_wholeLinearLayout;
     private TextView show_addImageMinTextView;
     private View show_viewSpace;
-    private ArrayList<String> imagePathList = new ArrayList<>();
-    private int item_pos;
+    private ArrayList<String> imagePathList;
+    private int memoId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,8 +57,7 @@ public class ShowMemoItem extends AppCompatActivity {
         show_addImageMinTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 레이어 팝업으로 이동
-                intent = new Intent(ShowMemoItem.this, ImageAddPopup.class);
+                intent = new Intent(ShowMemoItem.this, ImageAddPopup.class);        // 레이어 팝업으로 이동
                 startActivityForResult(intent, POPUP_RES);
             }
         });
@@ -68,8 +65,7 @@ public class ShowMemoItem extends AppCompatActivity {
         show_wholeLinearLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 기존의 텍스트를 editText로 이동
-                show_edit_title.setVisibility(View.VISIBLE);
+                show_edit_title.setVisibility(View.VISIBLE);        // 기존의 텍스트를 editText로 이동
                 show_title.setVisibility(View.GONE);
 
                 show_edit_content.setVisibility(View.VISIBLE);
@@ -78,8 +74,7 @@ public class ShowMemoItem extends AppCompatActivity {
                 show_addImageMinTextView.setVisibility(View.VISIBLE);
                 show_viewSpace.setVisibility(View.GONE);
 
-                // 변경한 내용을 editText로 전달
-                show_edit_title.setText(show_title.getText());
+                show_edit_title.setText(show_title.getText());       // 변경한 내용을 editText로 전달
                 show_edit_content.setText(show_content.getText());
 
                 editItem.setVisible(false);
@@ -91,13 +86,11 @@ public class ShowMemoItem extends AppCompatActivity {
     private void initLayout() {
         toolbar = (androidx.appcompat.widget.Toolbar) findViewById(R.id.show_toolbar);
         setSupportActionBar(toolbar);
-        // 툴바 설정
-        getSupportActionBar().setTitle(R.string.app_name);
+        getSupportActionBar().setTitle(R.string.app_name);          // 툴바 설정
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         intent = getIntent();
         memo_item = (MemoInfoData) intent.getSerializableExtra("memo_item");
-        item_pos = intent.getExtras().getInt("ITEM_INDEX");
         show_title = (TextView) findViewById(R.id.show_title);
         show_content = (TextView) findViewById(R.id.show_content);
         show_title.setText(memo_item.getTitle());
@@ -107,8 +100,12 @@ public class ShowMemoItem extends AppCompatActivity {
         show_wholeLinearLayout = (LinearLayout) findViewById(R.id.show_wholeLinearLayout);
         show_addImageMinTextView = (TextView) findViewById(R.id.show_addImageMinTextView);
         show_viewSpace = (View) findViewById(R.id.show_viewSpace);
+        memoId = memo_item.getId();
 
-        if( memo_item.getImages() != null ) {
+        String images = memo_item.getImages().toString();
+        if(images.equals("[]")) {
+            imagePathList = new ArrayList<>();
+        } else {
             imagePathList = memo_item.getImages();
         }
 
@@ -122,12 +119,11 @@ public class ShowMemoItem extends AppCompatActivity {
         imageRecyclerView.addOnItemTouchListener(new RecyclerTouchListener(getApplicationContext(), imageRecyclerView, new ClickListener() {
             @Override
             public void onClick(View view, int position) {
-                // 보기 기능일 때는 크게하기 기능만
-                if( show_title.getVisibility() == View.VISIBLE ) {
+                if( show_title.getVisibility() == View.VISIBLE ) {          // 보기 기능일 때는 크게하기 기능만
                     intent = new Intent(ShowMemoItem.this, ImagePreview.class);
                     intent.putExtra("IMAGE_ITEM_PATH", imagePathList.get(position));
                     startActivity(intent);
-                } else { // 편집 기능일 때는 크게하기, 삭제 기능
+                } else {                                                    // 편집 기능일 때는 크게하기, 삭제 기능
                     showImageDialog(position);
                 }
             }
@@ -141,10 +137,9 @@ public class ShowMemoItem extends AppCompatActivity {
 
         final Button dialog_enlargeImage = (Button) builder_view.findViewById(R.id.dialog_enlargeImage);
         final Button dialog_deleteImage = (Button) builder_view.findViewById(R.id.dialog_deleteImage);
-
         final AlertDialog dialog = builder.create();
-
         final int pos = position;
+
         dialog_enlargeImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -172,12 +167,11 @@ public class ShowMemoItem extends AppCompatActivity {
         void onClick(View view, int position);
     }
 
-    // 팝업으로 부터 값 받기
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {         // 팝업으로 부터 값 받기
         super.onActivityResult(requestCode, resultCode, data);
 
-        if( requestCode == POPUP_RES && resultCode == RESULT_OK ) {
+        if(requestCode == POPUP_RES && resultCode == RESULT_OK) {
             String imagePath = "";
             imagePath = data.getStringExtra("IMAGE_PATH");
             imagePathList.add(0, imagePath);
@@ -185,13 +179,11 @@ public class ShowMemoItem extends AppCompatActivity {
         }
     }
 
-    // RecyclerView item 클릭시 반응
-    public static class RecyclerTouchListener implements RecyclerView.OnItemTouchListener {
-
+    public static class RecyclerTouchListener implements RecyclerView.OnItemTouchListener {         // RecyclerView item 클릭시 반응
         private GestureDetector gestureDetector;
         private ShowMemoItem.ClickListener clickListener;
 
-        public RecyclerTouchListener(Context context, final RecyclerView recyclerView, final ShowMemoItem.ClickListener clickListener) {
+        RecyclerTouchListener(Context context, final RecyclerView recyclerView, final ShowMemoItem.ClickListener clickListener) {
             this.clickListener = clickListener;
             gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
                 @Override
@@ -211,17 +203,14 @@ public class ShowMemoItem extends AppCompatActivity {
         }
 
         @Override
-        public void onTouchEvent(RecyclerView rv, MotionEvent e) {
-        }
+        public void onTouchEvent(RecyclerView rv, MotionEvent e) {}
 
         @Override
-        public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {
-        }
+        public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {}
     }
 
-    // 편집 버튼 툴바에 추가
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(Menu menu) {         // 편집 버튼 툴바에 추가
         MenuInflater menuInflater = getMenuInflater();
         menuInflater.inflate(R.menu.show_toolbar_button, menu);
 
@@ -231,29 +220,23 @@ public class ShowMemoItem extends AppCompatActivity {
         return super.onCreateOptionsMenu(menu);
     }
 
-    // toolbar 키 뒤로가기
     @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {          // toolbar 키 뒤로가기
         switch(item.getItemId()) {
-            // 툴바의 뒤로가기 버튼 눌렀을 때 동작
-            case android.R.id.home: {
-                if( show_edit_title.getVisibility() == View.VISIBLE ) {
+            case android.R.id.home : {
+                if( show_edit_title.getVisibility() == View.VISIBLE ) {             // 툴바의 뒤로가기 버튼 눌렀을 때 동작
                     showSaveDialog();
                 } else {
                     finish();
                 }
                 return true;
             }
-            // 툴바의 저장 버튼 눌렀을 때 동작
-            case R.id.show_save_button_toolbar: {
+            case R.id.show_save_button_toolbar : {                                  // 툴바의 저장 버튼 눌렀을 때 동작
                 saveRecyclerItemAndNotify();
                 return true;
             }
-            // 툴바의 편집 버튼 눌렀을 때 동작
-            case R.id.show_edit_button_toolbar: {
-                // 기존의 텍스트를 editText로 이동
-                show_edit_title.setVisibility(View.VISIBLE);
+            case R.id.show_edit_button_toolbar : {                                   // 툴바의 편집 버튼 눌렀을 때 동작
+                show_edit_title.setVisibility(View.VISIBLE);                         // 기존의 텍스트를 editText로 이동
                 show_title.setVisibility(View.GONE);
 
                 show_edit_content.setVisibility(View.VISIBLE);
@@ -262,8 +245,7 @@ public class ShowMemoItem extends AppCompatActivity {
                 show_addImageMinTextView.setVisibility(View.VISIBLE);
                 show_viewSpace.setVisibility(View.GONE);
 
-                // 변경한 내용을 editText로 전달
-                show_edit_title.setText(show_title.getText());
+                show_edit_title.setText(show_title.getText());                         // 변경한 내용을 editText로 전달
                 show_edit_content.setText(show_content.getText());
 
                 editItem.setVisible(false);
@@ -275,11 +257,9 @@ public class ShowMemoItem extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // 뒤로가기 버튼 클릭시 종료
     @Override
-    public void onBackPressed() {
-        // 편집 모드 일때만 물어봄
-        if( show_edit_title.getVisibility() == View.VISIBLE ) {
+    public void onBackPressed() {                                           // 뒤로가기 버튼 클릭시 종료
+        if( show_edit_title.getVisibility() == View.VISIBLE ) {             // 편집 모드 일때만 물어봄
             showSaveDialog();
         } else {
             super.onBackPressed();
@@ -315,21 +295,20 @@ public class ShowMemoItem extends AppCompatActivity {
     }
 
     private void saveRecyclerItemAndNotify() {
-        // 기존의 텍스트를 textView로 이동
-        show_edit_title.setVisibility(View.GONE);
+        show_edit_title.setVisibility(View.GONE);               // 기존의 텍스트를 textView로 이동
         show_title.setVisibility(View.VISIBLE);
 
         show_edit_content.setVisibility(View.GONE);
         show_content.setVisibility(View.VISIBLE);
 
-        // 변경한 내용을 editText로 전달
-        show_title.setText(show_edit_title.getText());
+        show_title.setText(show_edit_title.getText());           // 변경한 내용을 editText로 전달
         show_content.setText(show_edit_content.getText());
 
         String thumbnail = "";
         if(imagePathList.size() != 0) {
             thumbnail = imagePathList.get(0);
         }
+        String images = imagePathList.toString();
         String title = show_title.getText().toString();
         String content = show_content.getText().toString();
 
@@ -337,9 +316,17 @@ public class ShowMemoItem extends AppCompatActivity {
         Date date = new Date();
         String cur_date = simpleDateFormat.format(date);
 
-        MemoInfoData memoInfoData = new MemoInfoData(thumbnail, imagePathList, title, content, cur_date, false);
-        globalMemoInfoData.set(item_pos, memoInfoData);
-        memoListArrayAdapter.notifyDataSetChanged();
+        String sqlQuery = "UPDATE MEMO_INFO SET " +
+                "THUMBNAIL = "  + "'" + thumbnail       + "', " +
+                "IMAGES = "     + "'" + images          + "', " +
+                "TITLE = "      + "'" + title           + "', " +
+                "CONTENT = "    + "'" + content         + "', " +
+                "DATE = "       + "'" + cur_date        + "', " +
+                "CHECKED = "    + "'" + 0               + "' "  +
+                "WHERE ID = "   + "'" + memoId  + "'";
+        System.out.println(sqlQuery);
+        sqLiteDatabase.execSQL(sqlQuery);       // 메모 내용 업데이트 쿼리 실행
+
         finish();
     }
 }

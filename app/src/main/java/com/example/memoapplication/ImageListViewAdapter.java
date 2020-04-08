@@ -19,26 +19,25 @@ import java.util.ArrayList;
 // 이미지 로딩 시 Picasso 라이브러리 사용 [출처 : https://github.com/square/picasso]
 
 public class ImageListViewAdapter extends RecyclerView.Adapter<ImageListViewAdapter.ViewHolder> {
-
     private Handler handler = new Handler();
     private ArrayList<String> imageList;
     private Context context;
     private int height = 0;
 
-    public class ViewHolder extends RecyclerView.ViewHolder {
-        public ImageView item_imageView;
+    ImageListViewAdapter(Context context, ArrayList<String> imageList) {
+        this.imageList = imageList;
+        this.context = context;
+    }
 
-        public ViewHolder(@NonNull View itemView) {
+    class ViewHolder extends RecyclerView.ViewHolder {
+        private ImageView item_imageView;
+
+        ViewHolder(@NonNull View itemView) {
             super(itemView);
             item_imageView = itemView.findViewById(R.id.item_imageView);
             item_imageView.getLayoutParams().height = height;
             item_imageView.getLayoutParams().width = height;
         }
-    }
-
-    public ImageListViewAdapter(Context context, ArrayList<String> imageList) {
-        this.imageList = imageList;
-        this.context = context;
     }
 
     @NonNull
@@ -53,12 +52,14 @@ public class ImageListViewAdapter extends RecyclerView.Adapter<ImageListViewAdap
     public void onBindViewHolder(@NonNull ImageListViewAdapter.ViewHolder holder, int position) {
         String item = imageList.get(position);
 
-        if( item.contains("https://") ) {
-            Thread thread = new Thread(new ImageLoadThread(item, holder));
-            thread.start();
-        } else {
-            item = "file://" + item;
-            Picasso.get().load(item).into(holder.item_imageView);
+        if(!item.equals("")) {
+            if (item.contains("https://")) {
+                Thread thread = new Thread(new ImageLoadThread(item, holder));
+                thread.start();
+            } else {
+                item = "file://" + item;
+                Picasso.get().load(item).into(holder.item_imageView);
+            }
         }
     }
 
@@ -70,7 +71,7 @@ public class ImageListViewAdapter extends RecyclerView.Adapter<ImageListViewAdap
     public class ImageLoadThread implements Runnable {
         private String item;
         private ImageListViewAdapter.ViewHolder holder;
-        public ImageLoadThread(String item, ImageListViewAdapter.ViewHolder holder) {
+        private ImageLoadThread(String item, ImageListViewAdapter.ViewHolder holder) {
             this.item = item;
             this.holder = holder;
         }
@@ -82,7 +83,7 @@ public class ImageListViewAdapter extends RecyclerView.Adapter<ImageListViewAdap
                 InputStream is = url.openStream();
                 handler.post(new Runnable() {
                     @Override
-                    public void run() {  // 화면에 그려줄 작업
+                    public void run() {             // 화면에 그려줄 작업
                         Picasso.get().load(item).into(holder.item_imageView);
                     }
                 });

@@ -26,10 +26,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
-import static com.example.memoapplication.MainActivity.globalMemoInfoData;
-import static com.example.memoapplication.MainActivity.memoListArrayAdapter;
+import static com.example.memoapplication.MainActivity.databaseMemoId;
+import static com.example.memoapplication.MainActivity.sqLiteDatabase;
 
 public class AddMemoActivity extends AppCompatActivity {
+    static final int POPUP_RES = 1;
 
     private androidx.appcompat.widget.Toolbar toolbar;
     private EditText add_title;
@@ -40,8 +41,6 @@ public class AddMemoActivity extends AppCompatActivity {
     private ImageListViewAdapter imageListViewAdapter;
     private ArrayList<String> imagePathList = new ArrayList<>();
     private Intent intent;
-
-    static final int POPUP_RES = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,8 +53,7 @@ public class AddMemoActivity extends AppCompatActivity {
         add_addImageTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 레이어 팝업으로 이동
-                intent = new Intent(AddMemoActivity.this, ImageAddPopup.class);
+                intent = new Intent(AddMemoActivity.this, ImageAddPopup.class);     // 레이어 팝업으로 이동
                 startActivityForResult(intent, 1);
             }
         });
@@ -63,8 +61,7 @@ public class AddMemoActivity extends AppCompatActivity {
         add_addImageMinTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 레이어 팝업으로 이동
-                intent = new Intent(AddMemoActivity.this, ImageAddPopup.class);
+                intent = new Intent(AddMemoActivity.this, ImageAddPopup.class);     // 레이어 팝업으로 이동
                 startActivityForResult(intent, POPUP_RES);
             }
         });
@@ -82,6 +79,7 @@ public class AddMemoActivity extends AppCompatActivity {
                 final AlertDialog dialog = builder.create();
 
                 final int pos = position;
+
                 dialog_enlargeImage.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -133,9 +131,7 @@ public class AddMemoActivity extends AppCompatActivity {
         void onLongClick(View view, int position);
     }
 
-    // RecyclerView item 클릭시 반응
-    public static class RecyclerTouchListener implements RecyclerView.OnItemTouchListener {
-
+    public static class RecyclerTouchListener implements RecyclerView.OnItemTouchListener {     // RecyclerView item 클릭시 이벤트
         private GestureDetector gestureDetector;
         private AddMemoActivity.ClickListener clickListener;
 
@@ -143,9 +139,7 @@ public class AddMemoActivity extends AppCompatActivity {
             this.clickListener = clickListener;
             gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
                 @Override
-                public boolean onSingleTapUp(MotionEvent e) {
-                    return true;
-                }
+                public boolean onSingleTapUp(MotionEvent e) { return true; }
 
                 @Override
                 public void onLongPress(MotionEvent e) {
@@ -167,26 +161,22 @@ public class AddMemoActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onTouchEvent(RecyclerView rv, MotionEvent e) {
-        }
+        public void onTouchEvent(RecyclerView rv, MotionEvent e) {}
 
         @Override
-        public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {
-        }
+        public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {}
     }
 
-    // 팝업으로 부터 값 받기
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {         // 팝업으로 부터 값 받기
         super.onActivityResult(requestCode, resultCode, data);
-        // 추가하기 텍스트 크기를 줄이고 이미지 보여주기
-        if (add_addImageTextView.getVisibility() == View.VISIBLE) {
+        if (add_addImageTextView.getVisibility() == View.VISIBLE) {          // 추가하기 텍스트 크기를 줄이고 이미지 보여주기
             add_addImageTextView.setVisibility(View.GONE);
             add_addImageMinTextView.setVisibility(View.VISIBLE);
             imageRecyclerView.setVisibility(View.VISIBLE);
         }
 
-        if( requestCode == POPUP_RES && resultCode == RESULT_OK ) {
+        if(requestCode == POPUP_RES && resultCode == RESULT_OK) {
             String imagePath = "";
             imagePath = data.getStringExtra("IMAGE_PATH");
             imagePathList.add(0, imagePath);
@@ -194,21 +184,18 @@ public class AddMemoActivity extends AppCompatActivity {
         }
     }
 
-    // 저장 버튼 툴바에 추가
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(Menu menu) {     // 저장 버튼 툴바에 추가
         MenuInflater menuInflater = getMenuInflater();
         menuInflater.inflate(R.menu.add_toolbar_button, menu);
 
         return super.onCreateOptionsMenu(menu);
     }
 
-    // toolbar 아이템 동작
     @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {      // toolbar 아이템 동작
         switch(item.getItemId()) {
-            // 툴바의 뒤로가기 버튼 눌렀을 때 동작
-            case android.R.id.home: {
+            case android.R.id.home: {                   // 툴바의 뒤로가기 버튼 눌렀을 때 동작
                 String title = add_title.getText().toString();
                 String content = add_content.getText().toString();
                 if( title.equals("") && content.equals("") && imagePathList.size() == 0 ) {
@@ -218,8 +205,7 @@ public class AddMemoActivity extends AppCompatActivity {
                 }
                 return true;
             }
-            // 툴바의 저장 버튼 눌렀을 때 동작
-            case R.id.add_save_button_toolbar: {
+            case R.id.add_save_button_toolbar: {        // 툴바의 저장 버튼 눌렀을 때 동작
                 saveRecyclerItemAndNotify();
                 return true;
             }
@@ -227,13 +213,11 @@ public class AddMemoActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // 편집 도중 종료시 저장 여부 묻기
     @Override
-    public void onBackPressed() {
+    public void onBackPressed() {           // 편집 도중 종료시 저장 여부 묻기
         String title = add_title.getText().toString();
         String content = add_content.getText().toString();
-        // 입력한 내용이 있다면 저장 여부 다이얼로그 생성
-        if( title.equals("") && content.equals("") && imagePathList.size() == 0 ) {
+        if(title.equals("") && content.equals("") && imagePathList.size() == 0) {         // 입력한 내용이 있다면 저장 여부 다이얼로그 생성
             finish();
         } else {
             showSaveDialog();
@@ -247,7 +231,6 @@ public class AddMemoActivity extends AppCompatActivity {
 
         final Button dialog_save = (Button) builder_view.findViewById(R.id.dialog_save);
         final Button dialog_notSave = (Button) builder_view.findViewById(R.id.dialog_notSave);
-
         final AlertDialog dialog = builder.create();
 
         dialog_save.setOnClickListener(new View.OnClickListener() {
@@ -264,7 +247,6 @@ public class AddMemoActivity extends AppCompatActivity {
                 finish();
             }
         });
-
         dialog.show();
     }
 
@@ -275,24 +257,37 @@ public class AddMemoActivity extends AppCompatActivity {
         if( title.equals("") ) {
             Toast.makeText(AddMemoActivity.this, "제목을 입력하세요", Toast.LENGTH_SHORT).show();
         } else {
-            String thumbnail = "";
-            if(imagePathList.size() != 0) {
-                thumbnail = imagePathList.get(0);
+            if(sqLiteDatabase != null) {
+                databaseMemoId += 1;        // memoId 값 1 증가
+
+                String thumbnail = "";
+                if(imagePathList.size() > 0) { thumbnail = imagePathList.get(0); }
+
+                String images = "";
+                if(imagePathList.size() > 0) { images = imagePathList.toString(); }
+
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy년 MM월 dd일 hh시 mm분");
+                Date date = new Date();
+                String cur_date = simpleDateFormat.format(date);
+
+                String sqlInsert = "INSERT INTO MEMO_INFO " +
+                        "(ID, THUMBNAIL, IMAGES, TITLE, CONTENT, DATE, CHECKED) VALUES (" +
+                        "'" + databaseMemoId    + "', " +
+                        "'" + thumbnail         + "', " +
+                        "'" + images            + "', " +
+                        "'" + title             + "', " +
+                        "'" + content           + "', " +
+                        "'" + cur_date          + "', " +
+                        "'" + 0                 + "'"   + ")";
+                System.out.println(sqlInsert);
+                sqLiteDatabase.execSQL(sqlInsert);
+
+                Toast.makeText(AddMemoActivity.this, "메모가 저장되었습니다.", Toast.LENGTH_SHORT).show();
+
+                intent = new Intent(AddMemoActivity.this, MainActivity.class);
+                setResult(RESULT_OK, intent);
+                finish();
             }
-
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy년 MM월 dd일 hh시 mm분");
-            Date date = new Date();
-            String cur_date = simpleDateFormat.format(date);
-
-            MemoInfoData memoInfoData = new MemoInfoData(thumbnail, imagePathList, title, content, cur_date, false);
-            globalMemoInfoData.add(0, memoInfoData);
-
-            Toast.makeText(AddMemoActivity.this, "메모가 저장되었습니다.", Toast.LENGTH_SHORT).show();
-
-            intent = new Intent(AddMemoActivity.this, MainActivity.class);
-            setResult(RESULT_OK, intent);
-            memoListArrayAdapter.notifyDataSetChanged();
-            finish();
         }
     }
 }
