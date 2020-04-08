@@ -69,7 +69,7 @@
 5. 역할별로 클래스나 메소드를 조금 더 쪼개고 정리를 잘했으면 좋겠다는 생각이 듭니다.
 6. Thread 처리 방식이 매끄럽지 못하고 예외처리가 되지 않아 아쉽습니다.
 
-- 해결
+- 수정
 1. 사용 이유 : MemoInfoData를 전역변수로 사용해서 json 파일로 저장하기 위해 Application을 상속받음
 2. 사용 이유 : json 으로 데이터를 처리하여 앱에 저장하기 위해 JSONObject 사용
 3. 사용 이유 : 앱 용 db를 사용하지 않았기 때문에 종료시점을 잡아서 파일 저장
@@ -78,7 +78,8 @@
 테이블 : MEMO_INFO
 컬럼 : ID, THUMBNAIL, IMAGES, TITLE, CONTENT, DATE, CHECKED
 속성 : INT PRIMARY KEY, VARCHAR, TEXT, VARCHAR NOT NULL, TEXT, VARCHAR, INTEGER
-4. 5.
+4. Java의 코딩 컨벤션 숙지 미흡
+5. 객체지향 프로그래밍 미숙
 => Java의 코딩 컨벤션을 참고하여 수정
 6. 예외처리, URL로 이미지 불러오기 에러시 예외처리
 => 수정중..
